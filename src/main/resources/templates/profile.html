@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>プロフィール</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <style>
+        body { background-color: #f4f6f9; margin: 0; }
+        .profile-card { border-radius: 14px; }
+        .profile-img { width: 90px; height: 90px; object-fit: cover; border-radius: 50%; }
+        .profile-avatar { width: 90px; height: 90px; border-radius: 50%; background: #3d6bcc; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; color: white; position: relative; }
+        .photo-edit-btn { position: absolute; bottom: 0; right: 0; width: 34px; height: 34px; border-radius: 50%; background: #3d6bcc; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; text-decoration: none; border: 2px solid white; }
+        .tag { display: inline-block; background: #e8f0fe; color: #3d6bcc; border-radius: 20px; padding: 4px 14px; margin: 3px; font-size: 0.85rem; }
+        .mbti-badge { display: inline-block; border-radius: 8px; padding: 4px 14px; font-size: 0.88rem; font-weight: 700; }
+        .mbti-nt { background: #7c3aed; color: white; }
+        .mbti-nf { background: #16a34a; color: white; }
+        .mbti-sj { background: #1d4ed8; color: white; }
+        .mbti-sp { background: #c2410c; color: white; }
+        .info-label { font-size: 0.72rem; letter-spacing: 0.06em; color: #aaa; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+        .info-section { padding: 16px 0; border-bottom: 1px solid #f0f0f0; }
+        .info-section:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<th:block th:replace="~{fragments/sidebar :: nav('mypage')}"></th:block>
+
+<div class="main-content">
+<div class="container py-4 py-md-5" style="max-width: 720px;">
+
+    <!-- フラッシュメッセージ -->
+    <div th:if="${success}" class="alert alert-success py-2 small mb-3" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-danger py-2 small mb-3" th:text="${error}"></div>
+
+    <div class="card shadow-sm profile-card p-4">
+
+        <!-- ヘッダー -->
+        <div class="d-flex align-items-start align-items-md-center mb-4 gap-3">
+            <div style="position:relative; display:inline-block; flex-shrink:0;">
+                <div th:if="${user.profileImageUrl == null}" class="profile-avatar"
+                     th:text="${user.name != null and !#strings.isEmpty(user.name) ? #strings.substring(user.name,0,1) : '?'}"></div>
+                <div th:if="${user.profileImageUrl != null and !#strings.startsWith(user.profileImageUrl, '/')}"
+                     class="profile-avatar" th:text="${user.profileImageUrl}"></div>
+                <img th:if="${user.profileImageUrl != null and #strings.startsWith(user.profileImageUrl, '/')}"
+                     th:src="${user.profileImageUrl}" class="profile-img">
+                <a th:if="${isOwnProfile or isAdmin}" th:href="@{/users/{id}/photo/edit(id=${user.id})}" class="photo-edit-btn" title="写真を変更">✏️</a>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <h4 class="mb-0" th:text="${user.name ?: '名前未設定'}"></h4>
+                    <span th:if="${user.mbti != null}"
+                          th:text="${user.mbti}"
+                          th:classappend="${#strings.startsWith(user.mbti,'INT') or #strings.startsWith(user.mbti,'ENT')} ? 'mbti-badge mbti-nt' :
+                                          (${#strings.startsWith(user.mbti,'INF') or #strings.startsWith(user.mbti,'ENF')} ? 'mbti-badge mbti-nf' :
+                                          (${#strings.startsWith(user.mbti,'IST') or #strings.startsWith(user.mbti,'EST') or #strings.startsWith(user.mbti,'ISF') and #strings.endsWith(user.mbti,'J') or #strings.startsWith(user.mbti,'ESF') and #strings.endsWith(user.mbti,'J')} ? 'mbti-badge mbti-sj' :
+                                          'mbti-badge mbti-sp'))"></span>
+                </div>
+                <p class="text-muted mb-0 small" th:text="${user.nickname}"></p>
+                <p class="text-muted mb-0" style="font-size:0.78rem;">
+                    <span th:text="${user.department}"></span>
+                    <span th:if="${user.department != null and user.jobTitle != null}"> · </span>
+                    <span th:text="${user.jobTitle}"></span>
+                </p>
+            </div>
+            <div th:if="${isOwnProfile}" class="d-flex flex-column gap-2 ms-auto">
+                <a th:href="@{/users/{id}/edit(id=${user.id})}" class="btn btn-outline-primary btn-sm">編集する</a>
+                <a th:href="@{/users/{id}/password(id=${user.id})}" class="btn btn-outline-secondary btn-sm">パスワード変更</a>
+            </div>
+        </div>
+
+        <hr class="mt-0">
+
+        <!-- 自分のプロフィールが空の場合の案内 -->
+        <div th:if="${isOwnProfile and (user.hobbies == null or user.hobbies.isEmpty()) and (user.communicationStyle == null or #strings.isEmpty(user.communicationStyle)) and (user.companyBelief == null or #strings.isEmpty(user.companyBelief)) and (user.bio == null or #strings.isEmpty(user.bio))}"
+             class="alert alert-info py-3 text-center small mb-0">
+            プロフィールがまだ入力されていません。<a th:href="@{/users/{id}/edit(id=${user.id})}" class="alert-link">編集する</a>から自己紹介を追加しましょう！
+        </div>
+
+        <!-- 趣味 -->
+        <div class="info-section" th:if="${user.hobbies != null and !user.hobbies.isEmpty()}">
+            <div class="info-label">趣味</div>
+            <span th:each="hobby : ${user.hobbies}" class="tag" th:text="${hobby}"></span>
+        </div>
+
+        <!-- 仲良くなるためには？ -->
+        <div class="info-section" th:if="${user.communicationStyle != null and !#strings.isEmpty(user.communicationStyle)}">
+            <div class="info-label">🤝 仲良くなるためには？</div>
+            <p class="mb-0" th:text="${user.communicationStyle}"></p>
+        </div>
+
+        <!-- 会社に求むこと -->
+        <div class="info-section" th:if="${user.companyBelief != null and !#strings.isEmpty(user.companyBelief)}">
+            <div class="info-label">🏢 会社に求むこと</div>
+            <p class="mb-0" th:text="${user.companyBelief}"></p>
+        </div>
+
+        <!-- その他の自己紹介 -->
+        <div class="info-section" th:if="${user.bio != null and !#strings.isEmpty(user.bio)}">
+            <div class="info-label">💬 自己紹介・一言</div>
+            <p class="mb-0" style="white-space: pre-wrap;" th:text="${user.bio}"></p>
+        </div>
+
+        <!-- 基本情報 -->
+        <div class="info-section">
+            <div class="row g-3">
+                <div class="col-6 col-md-4" th:if="${user.employeeId != null}">
+                    <div class="info-label">社員番号</div>
+                    <p class="mb-0" th:text="${user.employeeId}"></p>
+                </div>
+                <div class="col-6 col-md-4" th:if="${user.birthDate != null}">
+                    <div class="info-label">誕生日</div>
+                    <p class="mb-0" th:text="${#temporals.format(user.birthDate,'M月d日')}"></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+setTimeout(() => document.querySelectorAll('.alert').forEach(el => {
+    el.style.transition = 'opacity 0.5s'; el.style.opacity = '0';
+    setTimeout(() => el.remove(), 500);
+}), 4000);
+</script>
+</body>
+</html>

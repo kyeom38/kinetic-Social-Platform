@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>プロフィールの編集</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <style>
+        body { background-color: #f4f6f9; margin: 0; }
+        .profile-card { border-radius: 12px; }
+
+        /* 趣味タグ入力エリア */
+        .tag-input-area { border: 1px solid #ced4da; border-radius: 8px; padding: 8px; min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; cursor: text; }
+        .tag { display: inline-flex; align-items: center; background: #e8f0fe; color: #3d6bcc; border-radius: 20px; padding: 4px 12px; font-size: 0.85rem; white-space: nowrap; }
+        .tag .remove { cursor: pointer; margin-left: 6px; color: #888; }
+        #tagInput { border: none; outline: none; font-size: 0.85rem; min-width: 160px; flex: 1; }
+
+        /* 趣味候補タグ */
+        .hobby-preset { display: inline-block; background: #f0f0f0; color: #555; border-radius: 20px;
+                        padding: 4px 12px; margin: 3px; font-size: 0.82rem; cursor: pointer; border: 1px solid #ddd; transition: all 0.15s; }
+        .hobby-preset:hover { background: #e8f0fe; color: #3d6bcc; border-color: #3d6bcc; }
+        .hobby-preset.selected { background: #3d6bcc; color: white; border-color: #3d6bcc; }
+
+        /* MBTI ボタン - グループ別色 */
+        .mbti-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .mbti-btn { border-radius: 8px; font-size: 0.82rem; padding: 5px 12px; cursor: pointer; border: 2px solid transparent; font-weight: 600; transition: all 0.15s; }
+        .mbti-nt { background: #f3e8ff; color: #7c3aed; border-color: #e9d5ff; }
+        .mbti-nt.selected, .mbti-nt:hover { background: #7c3aed; color: white; border-color: #7c3aed; }
+        .mbti-nf { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+        .mbti-nf.selected, .mbti-nf:hover { background: #16a34a; color: white; border-color: #16a34a; }
+        .mbti-sj { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+        .mbti-sj.selected, .mbti-sj:hover { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        .mbti-sp { background: #ffedd5; color: #c2410c; border-color: #fed7aa; }
+        .mbti-sp.selected, .mbti-sp:hover { background: #c2410c; color: white; border-color: #c2410c; }
+
+        .mbti-group-label { font-size: 0.7rem; color: #aaa; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 4px; }
+        .section-divider { border-top: 1px solid #eee; margin: 24px 0; }
+        .readonly-field { background: #f8f9fa; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; color: #555; }
+        .readonly-label { font-size: 0.7rem; color: #aaa; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 2px; }
+        .profile-avatar-preview { width: 80px; height: 80px; border-radius: 50%; background: #3d6bcc;
+                                   display: flex; align-items: center; justify-content: center;
+                                   font-size: 1.8rem; font-weight: 700; color: white; }
+    </style>
+</head>
+<body>
+
+<th:block th:replace="~{fragments/sidebar :: nav('mypage')}"></th:block>
+
+<div class="main-content">
+<div class="container py-5" style="max-width: 720px;">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h4 class="mb-0">プロフィールの編集</h4>
+        <div class="d-flex gap-3 align-items-center">
+            <a th:href="@{/users/{id}/password(id=${user.id})}" class="text-muted text-decoration-none small">🔑 パスワード変更</a>
+            <a th:href="@{/users/{id}(id=${user.id})}" class="text-muted text-decoration-none small">← 戻る</a>
+        </div>
+    </div>
+
+    <!-- ── プロフィールアイコン ── -->
+    <div class="card shadow-sm profile-card p-4 mb-4">
+        <h6 class="fw-bold mb-3">🖼️ プロフィールアイコン</h6>
+        <div class="d-flex align-items-center gap-4">
+            <div>
+                <div th:if="${user.profileImageUrl == null}" class="profile-avatar-preview"
+                     th:text="${user.name != null and !#strings.isEmpty(user.name) ? #strings.substring(user.name,0,1) : '?'}"></div>
+                <div th:if="${user.profileImageUrl != null and !#strings.startsWith(user.profileImageUrl, '/')}"
+                     class="profile-avatar-preview" th:text="${user.profileImageUrl}"></div>
+                <img th:if="${user.profileImageUrl != null and #strings.startsWith(user.profileImageUrl, '/')}"
+                     th:src="${user.profileImageUrl}"
+                     style="width:80px;height:80px;object-fit:cover;border-radius:50%;">
+            </div>
+            <div>
+                <a th:href="@{/users/{id}/photo/edit(id=${user.id})}" class="btn btn-outline-primary btn-sm">
+                    アイコンを変更する
+                </a>
+                <div class="text-muted small mt-1">絵文字アイコンの中から選択できます</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 閲覧のみの情報 ── -->
+    <div class="card shadow-sm profile-card p-4 mb-4">
+        <h6 class="fw-bold mb-3">🏢 変更できない情報 <span class="text-muted fw-normal" style="font-size:0.78rem;">（変更は管理者まで）</span></h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="readonly-label">名前</div>
+                <div class="readonly-field" th:text="${user.name ?: '未設定'}"></div>
+            </div>
+            <div class="col-md-4" th:if="${user.birthDate != null}">
+                <div class="readonly-label">生年月日</div>
+                <div class="readonly-field" th:text="${#temporals.format(user.birthDate,'yyyy/MM/dd')}"></div>
+            </div>
+            <div class="col-md-4" th:if="${user.employeeId != null}">
+                <div class="readonly-label">社員番号</div>
+                <div class="readonly-field" th:text="${user.employeeId}"></div>
+            </div>
+            <div class="col-md-4" th:if="${user.department != null}">
+                <div class="readonly-label">部署</div>
+                <div class="readonly-field" th:text="${user.department}"></div>
+            </div>
+            <div class="col-md-4" th:if="${user.jobTitle != null}">
+                <div class="readonly-label">役職</div>
+                <div class="readonly-field" th:text="${user.jobTitle}"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── プロフィール編集フォーム ── -->
+    <div class="card shadow-sm profile-card p-4">
+        <form th:action="@{/users/{id}/edit(id=${user.id})}" th:object="${user}" method="post">
+
+            <!-- ニックネーム -->
+            <div class="mb-4">
+                <label class="form-label">ニックネーム</label>
+                <input type="text" class="form-control" th:field="*{nickname}" placeholder="呼ばれたい名前など">
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- MBTI -->
+            <div class="mb-4">
+                <label class="form-label fw-bold">MBTI</label>
+                <div class="mbti-group">
+                    <span class="mbti-btn mbti-nt" data-mbti="INTJ" th:classappend="${user.mbti == 'INTJ'} ? ' selected'" onclick="selectMbti(this)">INTJ</span>
+                    <span class="mbti-btn mbti-nt" data-mbti="INTP" th:classappend="${user.mbti == 'INTP'} ? ' selected'" onclick="selectMbti(this)">INTP</span>
+                    <span class="mbti-btn mbti-nt" data-mbti="ENTJ" th:classappend="${user.mbti == 'ENTJ'} ? ' selected'" onclick="selectMbti(this)">ENTJ</span>
+                    <span class="mbti-btn mbti-nt" data-mbti="ENTP" th:classappend="${user.mbti == 'ENTP'} ? ' selected'" onclick="selectMbti(this)">ENTP</span>
+                    <span class="mbti-btn mbti-nf" data-mbti="INFJ" th:classappend="${user.mbti == 'INFJ'} ? ' selected'" onclick="selectMbti(this)">INFJ</span>
+                    <span class="mbti-btn mbti-nf" data-mbti="INFP" th:classappend="${user.mbti == 'INFP'} ? ' selected'" onclick="selectMbti(this)">INFP</span>
+                    <span class="mbti-btn mbti-nf" data-mbti="ENFJ" th:classappend="${user.mbti == 'ENFJ'} ? ' selected'" onclick="selectMbti(this)">ENFJ</span>
+                    <span class="mbti-btn mbti-nf" data-mbti="ENFP" th:classappend="${user.mbti == 'ENFP'} ? ' selected'" onclick="selectMbti(this)">ENFP</span>
+                    <span class="mbti-btn mbti-sj" data-mbti="ISTJ" th:classappend="${user.mbti == 'ISTJ'} ? ' selected'" onclick="selectMbti(this)">ISTJ</span>
+                    <span class="mbti-btn mbti-sj" data-mbti="ISFJ" th:classappend="${user.mbti == 'ISFJ'} ? ' selected'" onclick="selectMbti(this)">ISFJ</span>
+                    <span class="mbti-btn mbti-sj" data-mbti="ESTJ" th:classappend="${user.mbti == 'ESTJ'} ? ' selected'" onclick="selectMbti(this)">ESTJ</span>
+                    <span class="mbti-btn mbti-sj" data-mbti="ESFJ" th:classappend="${user.mbti == 'ESFJ'} ? ' selected'" onclick="selectMbti(this)">ESFJ</span>
+                    <span class="mbti-btn mbti-sp" data-mbti="ISTP" th:classappend="${user.mbti == 'ISTP'} ? ' selected'" onclick="selectMbti(this)">ISTP</span>
+                    <span class="mbti-btn mbti-sp" data-mbti="ISFP" th:classappend="${user.mbti == 'ISFP'} ? ' selected'" onclick="selectMbti(this)">ISFP</span>
+                    <span class="mbti-btn mbti-sp" data-mbti="ESTP" th:classappend="${user.mbti == 'ESTP'} ? ' selected'" onclick="selectMbti(this)">ESTP</span>
+                    <span class="mbti-btn mbti-sp" data-mbti="ESFP" th:classappend="${user.mbti == 'ESFP'} ? ' selected'" onclick="selectMbti(this)">ESFP</span>
+                </div>
+                <input type="hidden" id="mbtiInput" th:field="*{mbti}">
+                <a href="https://www.16personalities.com/ja" target="_blank" class="small text-primary text-decoration-none mt-2 d-block">
+                    🔍 MBTIを診断する（16personalities）→
+                </a>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- 趣味 -->
+            <div class="mb-4">
+                <label class="form-label fw-bold">趣味</label>
+                <div class="mb-2">
+                    <span class="hobby-preset" onclick="addPreset(this)">スポーツ観覧</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">お笑いライブ</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">ダンス</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">カラオケ</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">お酒</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">K-POP</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">バスケ</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">野球</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">ボードゲーム</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">アニメ</span>
+                    <span class="hobby-preset" onclick="addPreset(this)">漫画</span>
+                </div>
+                <div class="tag-input-area" id="tagArea" onclick="document.getElementById('tagInput').focus()">
+                    <span th:each="hobby : ${user.hobbies}" class="tag">
+                        <span th:text="${hobby}"></span>
+                        <span class="remove" onclick="removeTag(this)">×</span>
+                        <input type="hidden" name="hobbies" th:value="${hobby}">
+                    </span>
+                    <input type="text" id="tagInput" placeholder="または直接入力してEnterで追加">
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+            <p class="fw-bold mb-3">自分について</p>
+
+            <div class="mb-3">
+                <label class="form-label">🤝 仲良くなるためには？</label>
+                <textarea class="form-control" rows="2" th:field="*{communicationStyle}"
+                          placeholder="例: とりあえず飲み会に誘って／内密な親近感が大事です　など"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">🏢 会社に求むこと</label>
+                <textarea class="form-control" rows="2" th:field="*{companyBelief}"
+                          placeholder="例: チームワークを大切にしてほしい／成長できる機会がほしい　など"></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">💬 その他の自己紹介や一言</label>
+                <textarea class="form-control" rows="3" th:field="*{bio}"
+                          placeholder="自由にどうぞ！"></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a th:href="@{/users/{id}(id=${user.id})}" class="btn btn-outline-secondary btn-sm">キャンセル</a>
+                <button type="submit" class="btn btn-primary btn-sm">保存する</button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function selectMbti(el) {
+        const already = el.classList.contains('selected');
+        document.querySelectorAll('.mbti-btn').forEach(b => b.classList.remove('selected'));
+        document.getElementById('mbtiInput').value = already ? '' : el.dataset.mbti;
+        if (!already) el.classList.add('selected');
+    }
+
+    const tagInput = document.getElementById('tagInput');
+    const tagArea  = document.getElementById('tagArea');
+
+    tagInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = tagInput.value.trim();
+            if (!val) return;
+            const exists = [...tagArea.querySelectorAll('input[name="hobbies"]')].some(i => i.value === val);
+            if (!exists) { addTag(val); }
+            tagInput.value = '';
+        }
+    });
+
+    function addPreset(el) {
+        const val = el.textContent.trim();
+        const exists = [...tagArea.querySelectorAll('input[name="hobbies"]')].some(i => i.value === val);
+        if (!exists) {
+            addTag(val);
+            el.classList.add('selected');
+        }
+    }
+
+    function addTag(val) {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.innerHTML = `<span>${val}</span><span class="remove" onclick="removeTag(this, '${val}')">×</span><input type="hidden" name="hobbies" value="${val}">`;
+        tagArea.insertBefore(span, tagInput);
+    }
+
+    function removeTag(el, val) {
+        el.parentElement.remove();
+        if (val) {
+            document.querySelectorAll('.hobby-preset').forEach(p => {
+                if (p.textContent.trim() === val) p.classList.remove('selected');
+            });
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const existing = [...tagArea.querySelectorAll('input[name="hobbies"]')].map(i => i.value);
+        document.querySelectorAll('.hobby-preset').forEach(p => {
+            if (existing.includes(p.textContent.trim())) p.classList.add('selected');
+        });
+    });
+</script>
+</body>
+</html>

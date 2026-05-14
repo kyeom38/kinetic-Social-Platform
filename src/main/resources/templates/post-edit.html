@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>投稿を編集</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <style>
+        body { background-color: #f4f6f9; margin: 0; }
+        .main-content { padding: 0 40px; }
+        .card { border-radius: 12px; border: none; }
+        .category-btn { border-radius: 20px; font-size: 0.85rem; margin: 2px; cursor: pointer; }
+        .category-btn.selected { background-color: #3d6bcc; color: white; border-color: #3d6bcc; }
+        .hobby-sub-btn.selected { background-color: #7c3aed; color: white; border-color: #7c3aed; }
+        .conditional-field { display: none; }
+        .advice-box { background: #f0f7ff; border-left: 4px solid #3d6bcc; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 0.85rem; display: none; }
+        @media (max-width: 991.98px) {
+            .main-content { padding: 0 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<th:block th:replace="~{fragments/sidebar :: nav('posts')}"></th:block>
+
+<div class="main-content">
+<div class="py-5" style="max-width: 700px; margin: 0 auto;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">投稿を編集</h4>
+        <a th:href="@{/posts/{id}(id=${post.id})}" class="text-muted text-decoration-none">← 詳細へ戻る</a>
+    </div>
+
+    <form th:action="@{/posts/{id}/edit(id=${post.id})}" th:object="${post}" method="post">
+        <div class="card shadow-sm p-4">
+
+            <!-- カテゴリー選択 -->
+            <div class="mb-4">
+                <label class="form-label fw-bold">カテゴリーを選択</label>
+                <div>
+                    <span th:each="cat : ${categories}"
+                          th:text="${cat}"
+                          th:data-category="${cat}"
+                          th:classappend="${post.category == cat} ? ' selected'"
+                          class="btn btn-sm btn-outline-primary category-btn"
+                          onclick="selectCategory(this)"></span>
+                </div>
+                <input type="hidden" id="categoryInput" th:field="*{category}">
+            </div>
+
+            <!-- カテゴリアドバイス -->
+            <div id="adviceBox" class="advice-box mb-4"></div>
+
+            <!-- お知らせチェック（管理者のみ） -->
+            <div sec:authorize="hasRole('ADMIN')" class="mb-4 p-3 bg-light rounded">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" th:field="*{announcement}" id="announcementCheck">
+                    <label class="form-check-label fw-bold" for="announcementCheck">
+                        📢 ホーム画面のお知らせに掲載する
+                    </label>
+                </div>
+            </div>
+
+            <!-- 趣味・おしゃべり: サブカテゴリ -->
+            <div id="hobbyFields" class="conditional-field mb-4">
+                <hr>
+                <p class="fw-bold mb-2" style="color:#7c3aed;">🎨 趣味のジャンル <span class="text-muted fw-normal" style="font-size:0.8rem;">任意</span></p>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="btn btn-sm btn-outline-secondary hobby-sub-btn" data-sub="スポーツ" onclick="selectSub(this)">⚽ スポーツ</span>
+                    <span class="btn btn-sm btn-outline-secondary hobby-sub-btn" data-sub="音楽" onclick="selectSub(this)">🎵 音楽</span>
+                    <span class="btn btn-sm btn-outline-secondary hobby-sub-btn" data-sub="アニメ" onclick="selectSub(this)">🎌 アニメ</span>
+                    <span class="btn btn-sm btn-outline-secondary hobby-sub-btn" data-sub="旅行" onclick="selectSub(this)">✈️ 旅行</span>
+                    <span class="btn btn-sm btn-outline-secondary hobby-sub-btn" data-sub="ゲーム" onclick="selectSub(this)">🎮 ゲーム</span>
+                    <span class="btn btn-sm btn-outline-secondary hobby-sub-btn" data-sub="動物" onclick="selectSub(this)">🐾 動物</span>
+                    <span class="btn btn-sm btn-outline-secondary hobby-sub-btn" data-sub="その他" onclick="selectSub(this)">💬 その他</span>
+                </div>
+                <input type="hidden" id="subCategoryInput" name="subCategory" th:value="${post.subCategory ?: ''}">
+            </div>
+
+            <!-- タイトル -->
+            <div class="mb-4">
+                <label class="form-label fw-bold">タイトル</label>
+                <input type="text" class="form-control" th:field="*{title}" placeholder="タイトルを入力">
+            </div>
+
+            <!-- 本文 -->
+            <div class="mb-4">
+                <label class="form-label fw-bold">内容</label>
+                <textarea class="form-control" rows="8" th:field="*{content}" placeholder="ここに内容を入力してください..."></textarea>
+            </div>
+
+            <!-- IT関連ニュース: リンクURL -->
+            <div id="newsFields" class="conditional-field mb-4">
+                <hr>
+                <p class="fw-bold text-primary mb-3">🔗 リンク情報</p>
+                <div class="mb-3">
+                    <label class="form-label">参照URL</label>
+                    <input type="url" class="form-control" th:field="*{sourceUrl}" placeholder="https://...">
+                    <div class="form-text">外部記事のURLを入力すると、掲示板から直接その記事に飛べます。</div>
+                </div>
+            </div>
+
+            <!-- イベント専用フィールド（日時・定員・締切・場所） -->
+            <div id="eventFields" class="conditional-field mb-4">
+                <hr>
+                <p class="fw-bold text-primary mb-3">🗓 イベント情報</p>
+                <div class="row mb-3 g-3">
+                    <div class="col-md-4">
+                        <label class="form-label" id="eventDateLabel">実施日</label>
+                        <input type="date" class="form-control" th:field="*{eventDate}" id="eventDateInput">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">定員 <span class="text-muted fw-normal" style="font-size:0.8rem;">任意</span></label>
+                        <input type="number" class="form-control" th:field="*{capacity}" placeholder="例: 20">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">募集締め切り <span class="text-muted fw-normal" style="font-size:0.8rem;">任意</span></label>
+                        <input type="date" class="form-control" th:field="*{deadline}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">開催場所 <span class="text-muted fw-normal" style="font-size:0.8rem;">任意</span></label>
+                    <input type="text" class="form-control" th:field="*{location}" placeholder="例: 会議室A / 渋谷〇〇ビル">
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a th:href="@{/posts/{id}(id=${post.id})}" class="btn btn-outline-secondary">キャンセル</a>
+                <button type="submit" class="btn btn-primary">更新する</button>
+            </div>
+        </div>
+    </form>
+</div>
+</div>
+
+<script th:inline="javascript">
+    const EVENT_REQUIRED   = /*[[${eventRequiredCategories}]]*/ [];
+    const EVENT_OPTIONAL   = /*[[${eventOptionalCategories}]]*/ [];
+    const EVENT_CATEGORIES = [...EVENT_REQUIRED, ...EVENT_OPTIONAL];
+    const NEWS_CATEGORIES  = /*[[${newsCategories}]]*/ [];
+    const HOBBY_CATEGORIES = /*[[${hobbyCategories}]]*/ [];
+
+    const ADVICE = {
+        'IT関連ニュース':     '💡 気になる外部記事やニュースをみんなと共有しましょう。参照URLを設定すると、掲示板から記事に直接飛べます。',
+        'お誘い':            '🍺 飲み会・ゴルフ・ボードゲーム・ライブ観戦・展示会・勉強会など、一緒に楽しめることなら何でも！日時・場所・人数を書くと参加しやすくなります。',
+        'その他のイベント':   '📍 地域のお祭り・割引イベント・展示会など、社員の生活に役立つ情報共有もOK。「こんなのあるよ」という気軽な情報から、舞台・ライブなど来てほしいイベントの告知まで。',
+        '趣味・おしゃべり':   '🎨 趣味の話題を気軽に投稿しましょう。おすすめ作品、旅行記録、スポーツ観戦の感想など何でもOK。',
+        '社内ニュース・イベント': '📢 社内公式のお知らせや行事の告知に使います。重要な情報はお知らせにチェックしてホームにも掲載できます。',
+    };
+
+    function selectCategory(el) {
+        const cat = el.dataset.category;
+        document.getElementById('categoryInput').value = cat;
+        document.querySelectorAll('.category-btn').forEach(btn =>
+            btn.classList.toggle('selected', btn === el));
+
+        const isEvent    = EVENT_CATEGORIES.includes(cat);
+        const isRequired = EVENT_REQUIRED.includes(cat);
+        const isNews     = NEWS_CATEGORIES.includes(cat);
+        const isHobby    = HOBBY_CATEGORIES.includes(cat);
+
+        document.getElementById('eventFields').style.display = isEvent ? 'block' : 'none';
+        document.getElementById('newsFields').style.display  = isNews  ? 'block' : 'none';
+        document.getElementById('hobbyFields').style.display = isHobby ? 'block' : 'none';
+        document.getElementById('eventDateInput').required   = isRequired;
+        document.getElementById('eventDateLabel').innerHTML  = isRequired
+            ? '実施日 <span class="text-danger">*</span>'
+            : '実施日 <span class="text-muted fw-normal" style="font-size:0.8rem;">任意</span>';
+
+        const adviceBox = document.getElementById('adviceBox');
+        if (ADVICE[cat]) {
+            adviceBox.textContent = ADVICE[cat];
+            adviceBox.style.display = 'block';
+        } else {
+            adviceBox.style.display = 'none';
+        }
+
+        if (!isHobby) {
+            document.getElementById('subCategoryInput').value = '';
+            document.querySelectorAll('.hobby-sub-btn').forEach(b => b.classList.remove('selected'));
+        }
+    }
+
+    function selectSub(el) {
+        document.querySelectorAll('.hobby-sub-btn').forEach(b =>
+            b.classList.toggle('selected', b === el));
+        document.getElementById('subCategoryInput').value = el.dataset.sub;
+    }
+
+    let isDirty = false;
+    document.querySelector('form').addEventListener('input', () => isDirty = true);
+    window.addEventListener('beforeunload', e => {
+        if (isDirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+    document.querySelector('form').addEventListener('submit', function() {
+        isDirty = false;
+        const btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.textContent = '更新中...';
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const currentCat = /*[[${post.category}]]*/ '';
+        const currentSub = /*[[${post.subCategory}]]*/ '';
+        const btn = [...document.querySelectorAll('.category-btn')]
+            .find(b => b.dataset.category === currentCat);
+        if (btn) selectCategory(btn);
+
+        if (currentSub) {
+            const subBtn = [...document.querySelectorAll('.hobby-sub-btn')]
+                .find(b => b.dataset.sub === currentSub);
+            if (subBtn) subBtn.classList.add('selected');
+        }
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
