@@ -262,7 +262,7 @@ src/main/resources/
 
 ## テスト構成
 
-```
+```text
 src/test/java/com/example/demo/
 ├── DemoApplicationTests.java           # Spring コンテキスト起動確認（H2使用）
 └── service/

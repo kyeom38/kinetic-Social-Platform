@@ -7,7 +7,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import PostDto;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Controller
 @RequiredArgsConstructor
@@ -18,10 +22,28 @@ public class HomeController {
 
     @GetMapping("/home")
     public String home(Model model) {
-        model.addAttribute("announcements", postService.getAnnouncements());
-        model.addAttribute("latestPost", postService.getAll().stream().findFirst().orElse(null));
-        model.addAttribute("popularPost", postService.getMostViewed().orElse(null));
-        model.addAttribute("itNews", postService.getMostViewedByCategory("IT関連ニュース").orElse(null));
+        List<PostDto> announcements = postService.getAnnouncements();
+        Set<Long> usedIds = new HashSet<>();
+        announcements.forEach(p -> usedIds.add(p.getId()));
+
+        PostDto latestPost = postService.getAll().stream()
+                .filter(p -> !usedIds.contains(p.getId()))
+                .findFirst().orElse(null);
+        if (latestPost != null) usedIds.add(latestPost.getId());
+
+        PostDto popularPost = postService.getMostViewed()
+                .filter(p -> !usedIds.contains(p.getId()))
+                .orElse(null);
+        if (popularPost != null) usedIds.add(popularPost.getId());
+
+        PostDto itNews = postService.getMostViewedByCategory("IT関連ニュース")
+                .filter(p -> !usedIds.contains(p.getId()))
+                .orElse(null);
+
+        model.addAttribute("announcements", announcements);
+        model.addAttribute("latestPost", latestPost);
+        model.addAttribute("popularPost", popularPost);
+        model.addAttribute("itNews", itNews);
         model.addAttribute("upcomingEvents", postService.getUpcomingEvents());
         model.addAttribute("orgChart", userService.getOrgChart());
         model.addAttribute("sevenDaysAgo", LocalDate.now().minusDays(7));
