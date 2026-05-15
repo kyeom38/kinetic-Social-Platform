@@ -52,7 +52,13 @@ java -jar target\demo-0.0.1-SNAPSHOT.jar
 `src/main/resources/application.properties.example` をコピーして `application.properties` にリネームし、各項目を設定する。
 
 ```bash
+# macOS / Linux
 cp src/main/resources/application.properties.example src/main/resources/application.properties
+```
+
+```powershell
+# Windows (PowerShell)
+Copy-Item src\main\resources\application.properties.example src\main\resources\application.properties
 ```
 
 コピー後、以下の項目を必ず実際の値に書き換える。
@@ -199,7 +205,7 @@ cp src/main/resources/application.properties.example src/main/resources/applicat
 
 ## アーキテクチャ概要
 
-```
+```text
 src/main/java/com/example/demo/
 ├── config/
 │   ├── SecurityConfig.java         # Spring Security 設定（ロール・パスのアクセス制御）
@@ -223,7 +229,7 @@ src/main/java/com/example/demo/
 └── dto/                            # View 層との受け渡し用 DTO
 ```
 
-```
+```text
 src/main/resources/
 ├── templates/
 │   ├── fragments/sidebar.html      # 共通サイドバー断片（全ページで th:replace）

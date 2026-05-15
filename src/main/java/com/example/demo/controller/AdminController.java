@@ -1,7 +1,6 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.UserDto;
-import com.example.demo.repository.UserRepository;
 import com.example.demo.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,7 +18,6 @@ import java.util.List;
 public class AdminController {
 
     private final UserService userService;
-    private final UserRepository userRepository;
 
     private static final List<String> DEPARTMENTS = List.of(
             "エンジニアリング部", "デザイン部", "マーケティング部",
@@ -76,6 +74,10 @@ public class AdminController {
     public String resetPassword(@PathVariable Long id,
                                 @RequestParam String newPassword,
                                 RedirectAttributes ra) {
+        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 8) {
+            ra.addFlashAttribute("resetError", "パスワードは8文字以上で入力してください");
+            return "redirect:/admin/users/" + id + "/edit";
+        }
         userService.resetPassword(id, newPassword);
         ra.addFlashAttribute("resetSuccess", "パスワードをリセットしました");
         return "redirect:/admin/users/" + id + "/edit";
@@ -86,7 +88,12 @@ public class AdminController {
     public String retireUser(@PathVariable Long id,
                              @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate retiredAt,
                              RedirectAttributes ra) {
+        if (retiredAt.isAfter(LocalDate.now())) {
+            ra.addFlashAttribute("retireError", "退職日に未来の日付は指定できません");
+            return "redirect:/admin/users";
+        }
         userService.retire(id, retiredAt);
+        ra.addFlashAttribute("retireSuccess", "退職処理が完了しました");
         return "redirect:/admin/users";
     }
 }

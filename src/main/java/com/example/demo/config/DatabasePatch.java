@@ -27,7 +27,7 @@ public class DatabasePatch {
     public void applyPatches() {
 
         if (dbReset) {
-            if (environment.matchesProfiles("prod")) {
+            if (environment.matchesProfiles("prod", "production")) {
                 log.warn("=== DB RESET: 本番環境 (prod) では実行されません ===");
             } else {
                 log.warn("=== DB RESET: 全テーブルを初期化します ===");
@@ -39,7 +39,7 @@ public class DatabasePatch {
         // ── posts: NOT NULL 制約を落とす ──────────────────────────────
         List<String> nonNullCols = jdbcTemplate.queryForList(
                 "SELECT column_name FROM information_schema.columns " +
-                "WHERE table_name = 'posts' AND is_nullable = 'NO'",
+                "WHERE table_name = 'posts' AND table_schema = 'public' AND is_nullable = 'NO'",
                 String.class
         );
         for (String col : nonNullCols) {
