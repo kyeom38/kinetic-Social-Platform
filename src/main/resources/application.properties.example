@@ -1,0 +1,33 @@
+spring.application.name=demo
+
+# 本番DB (Neon PostgreSQL)
+spring.datasource.url=jdbc:postgresql://<your-neon-host>/neondb?sslmode=require
+spring.datasource.username=<your-username>
+spring.datasource.password=<your-password>
+
+spring.thymeleaf.check-template-location=false
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+
+server.port=${PORT:8080}
+server.servlet.session.tracking-modes=cookie
+
+# HikariCP: Neon へのコールドスタート防止
+spring.datasource.hikari.keepalive-time=240000
+spring.datasource.hikari.minimum-idle=2
+spring.datasource.hikari.maximum-pool-size=5
+spring.datasource.hikari.connection-timeout=20000
+
+# 画像アップロード上限
+spring.servlet.multipart.max-file-size=5MB
+spring.servlet.multipart.max-request-size=10MB
+
+# 初期管理者アカウント（ADMINが0人の場合に自動作成）
+admin.email=admin@example.com
+admin.password=${ADMIN_PASSWORD}
+admin.name=管理者名
+
+# DB初期化フラグ: trueにして一度起動するとデータが全消去される。完了後はfalseに戻すこと
+app.db.reset=false
+app.db.seed=false

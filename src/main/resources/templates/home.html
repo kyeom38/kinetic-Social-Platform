@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ホーム - Kinetic Social</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <style>
+        body { background-color: #f0f2f7; margin: 0; }
+        .main-content { padding: 32px 24px; }
+
+        /* ── 組織図 ── */
+        .org-scroll-wrap { overflow-x: auto; overflow-y: visible; padding-bottom: 8px; }
+        .org-tree { display: inline-flex; flex-direction: column; align-items: center; min-width: 100%; }
+        .org-company { background: #3d6bcc; color: white; border-radius: 50px; padding: 8px 28px; font-weight: 700; font-size: 0.95rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
+        .org-vert { width: 2px; height: 20px; background: #c0cde8; flex-shrink: 0; }
+        .org-depts { display: flex; flex-wrap: nowrap; justify-content: flex-start; }
+        .org-dept-col {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 14px;
+            min-width: 148px;
+        }
+        .org-dept-col::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: #c0cde8;
+        }
+        .org-dept-col:first-child::before { left: 50%; }
+        .org-dept-col:last-child::before  { right: 50%; }
+        .org-dept-col:only-child::before  { display: none; }
+        .org-dept-label { background: #e8f0fe; color: #3d6bcc; border-radius: 8px; padding: 6px 14px; font-size: 0.82rem; font-weight: 600; text-align: center; }
+        .org-member { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 5px 12px; font-size: 0.8rem; text-align: center; width: 100%; }
+        .org-member.manager { border-color: #3d6bcc; background: #eef2fb; }
+        .org-badge { font-size: 0.65rem; color: #3d6bcc; font-weight: 600; }
+        .org-jobtitle { font-size: 0.65rem; color: #888; }
+        .org-new-badge { background: #dcfce7; color: #16a34a; border-radius: 20px; padding: 1px 5px; font-size: 0.58rem; font-weight: 700; vertical-align: middle; }
+
+        /* ── カード ── */
+        .section-card { background: white; border-radius: 14px; border: none; box-shadow: 0 1px 6px rgba(0,0,0,0.07); padding: 20px; margin-bottom: 20px; }
+        .post-mini { border-left: 3px solid #3d6bcc; padding: 10px 14px; background: #f8faff; border-radius: 0 8px 8px 0; margin-bottom: 10px; }
+        .post-mini a { text-decoration: none; color: inherit; }
+        .announce-card { background: #fff8e1; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 10px 10px 0; margin-bottom: 10px; }
+        .event-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .event-date-box { background: #e8f0fe; color: #3d6bcc; border-radius: 8px; padding: 4px 10px; text-align: center; min-width: 52px; font-size: 0.78rem; font-weight: 700; }
+
+        @media (max-width: 991.98px) {
+            .main-content { padding: 16px 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<th:block th:replace="~{fragments/sidebar :: nav('home')}"></th:block>
+
+<!-- メインコンテンツ -->
+<div class="main-content">
+    <h4 class="fw-bold mb-1">ホーム - チームマップ</h4>
+    <p class="text-muted small mb-4">組織のつながりを確認し、最新情報をチェックしましょう。</p>
+
+    <div class="row g-4">
+        <!-- 左：組織図 + 掲示板 -->
+        <div class="col-lg-8">
+
+            <!-- 組織図 -->
+            <div class="section-card">
+                <h6 class="fw-bold mb-3">🗂 組織図</h6>
+                <div th:if="${!orgChart.isEmpty()}" class="org-scroll-wrap">
+                <div class="org-tree">
+                    <div class="org-company">
+                        <img src="/speclogo.png" alt="SPEC" style="height:28px;">
+                    </div>
+                    <div class="org-vert"></div>
+                    <div class="org-depts">
+                        <div class="org-dept-col" th:each="entry : ${orgChart}">
+                            <div class="org-vert"></div>
+                            <div class="org-dept-label" th:text="${entry.key}"></div>
+                            <div class="org-vert"></div>
+                            <div th:each="mgr : ${entry.value['managers']}" class="org-member manager mb-1">
+                                <a th:href="@{/users/{id}(id=${mgr.id})}" th:text="${mgr.name}"
+                                   class="text-decoration-none text-dark fw-bold" style="font-size:0.8rem;"></a>
+                                <span th:if="${mgr.joinedAt != null and mgr.joinedAt.isAfter(sevenDaysAgo)}"
+                                      class="org-new-badge">NEW</span>
+                                <div class="org-badge" th:text="${mgr.jobTitle}"></div>
+                            </div>
+                            <div th:each="mem : ${entry.value['members']}" class="org-member mt-1">
+                                <a th:href="@{/users/{id}(id=${mem.id})}" th:text="${mem.name}"
+                                   class="text-decoration-none text-dark" style="font-size:0.8rem;"></a>
+                                <span th:if="${mem.joinedAt != null and mem.joinedAt.isAfter(sevenDaysAgo)}"
+                                      class="org-new-badge">NEW</span>
+                                <div class="org-jobtitle" th:text="${mem.jobTitle}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                <div th:if="${orgChart.isEmpty()}" class="text-muted small text-center py-3">
+                    組織情報がまだ登録されていません
+                </div>
+            </div>
+
+            <!-- 主要コンテンツ -->
+            <div class="section-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">📌 主要コンテンツ</h6>
+                    <a href="/posts" class="small text-primary text-decoration-none">すべて見る →</a>
+                </div>
+
+                <div th:each="a : ${announcements}" class="announce-card">
+                    <a th:href="@{/posts/{id}(id=${a.id})}" class="text-decoration-none">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="fw-bold small flex-grow-1" th:text="${a.title}"></div>
+                            <span class="badge flex-shrink-0" style="background:#f59e0b;font-size:0.68rem;">📢 お知らせ</span>
+                            <span class="text-muted flex-shrink-0" style="font-size:0.72rem;" th:text="${#temporals.format(a.createdAt,'MM/dd')}"></span>
+                        </div>
+                    </a>
+                </div>
+
+                <div th:if="${latestPost != null}" class="post-mini mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:href="@{/posts/{id}(id=${latestPost.id})}" th:text="${latestPost.title}" class="fw-bold small flex-grow-1"></a>
+                        <span class="badge flex-shrink-0" style="background:#22c55e;font-size:0.68rem;">NEW</span>
+                        <span class="text-muted flex-shrink-0" style="font-size:0.72rem;" th:text="${#temporals.format(latestPost.createdAt,'MM/dd')}"></span>
+                    </div>
+                    <div class="text-muted small" th:text="${#strings.abbreviate(latestPost.content, 60)}"></div>
+                </div>
+
+                <div th:if="${popularPost != null}" class="post-mini">
+                    <div class="d-flex align-items-center gap-2">
+                        <a th:href="@{/posts/{id}(id=${popularPost.id})}" th:text="${popularPost.title}" class="fw-bold small flex-grow-1"></a>
+                        <span class="badge bg-warning text-dark flex-shrink-0" style="font-size:0.68rem;">👁 人気</span>
+                        <span class="text-muted flex-shrink-0" style="font-size:0.72rem;" th:text="${#temporals.format(popularPost.createdAt,'MM/dd')}"></span>
+                    </div>
+                    <div class="text-muted small" th:text="${#strings.abbreviate(popularPost.content, 60)}"></div>
+                </div>
+
+                <div th:if="${latestPost == null and #lists.isEmpty(announcements)}" class="text-muted small text-center py-3">投稿がありません</div>
+            </div>
+        </div>
+
+        <!-- 右：ITニュース + イベント -->
+        <div class="col-lg-4">
+
+            <!-- ITニュース -->
+            <div class="section-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">💻 ITニュース</h6>
+                    <span class="badge bg-primary" style="font-size:0.7rem;">注目記事</span>
+                </div>
+                <div th:if="${itNews != null}">
+                    <img th:if="${itNews.coverImageUrl != null}" th:src="${itNews.coverImageUrl}"
+                         style="width:100%; height:140px; object-fit:cover; border-radius:8px;" class="mb-2">
+                    <div class="fw-bold small mb-1" th:text="${itNews.title}"></div>
+                    <div class="text-muted" style="font-size:0.78rem;" th:text="${#strings.abbreviate(itNews.content, 80)}"></div>
+                    <a th:if="${itNews.sourceUrl != null}" th:href="${itNews.sourceUrl}" target="_blank"
+                       class="small text-primary text-decoration-none d-block mt-2">記事を読む →</a>
+                    <a th:if="${itNews.sourceUrl == null}" th:href="@{/posts/{id}(id=${itNews.id})}"
+                       class="small text-primary text-decoration-none d-block mt-2">詳細を見る →</a>
+                </div>
+                <div th:if="${itNews == null}" class="text-muted small text-center py-3">記事がありません</div>
+            </div>
+
+            <!-- 今後のイベント -->
+            <div class="section-card">
+                <h6 class="fw-bold mb-3">📅 今後のイベント</h6>
+                <div th:if="${#lists.isEmpty(upcomingEvents)}" class="text-muted small text-center py-3">
+                    予定されているイベントはありません
+                </div>
+                <div th:each="ev : ${upcomingEvents}" class="event-item">
+                    <div class="event-date-box">
+                        <div th:text="${ev.eventDate != null ? #temporals.format(ev.eventDate,'MM/dd') : #temporals.format(ev.deadline,'MM/dd')}"></div>
+                    </div>
+                    <div>
+                        <a th:href="@{/posts/{id}(id=${ev.id})}" th:text="${ev.title}"
+                           class="fw-bold small text-decoration-none text-dark d-block"></a>
+                        <div class="text-muted" style="font-size:0.75rem;" th:text="${ev.category}"></div>
+                        <div th:if="${ev.location != null}" class="text-muted" style="font-size:0.75rem;">
+                            📍 <span th:text="${ev.location}"></span>
+                        </div>
+                        <div th:if="${ev.capacity != null}" class="text-muted" style="font-size:0.75rem;">
+                            定員 <span th:text="${ev.capacity}"></span>名
+                            ／ 参加 <span th:text="${ev.attendingCount}"></span>名
+                        </div>
+                    </div>
+                </div>
+                <a href="/posts" class="small text-muted text-decoration-none d-block text-center mt-2">掲示板でもっと見る</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+window.addEventListener('load', function() {
+    function centerOrg() {
+        const orgWrap = document.querySelector('.org-scroll-wrap');
+        if (orgWrap) {
+            orgWrap.scrollLeft = (orgWrap.scrollWidth - orgWrap.clientWidth) / 2;
+        }
+    }
+    centerOrg();
+    setTimeout(centerOrg, 150);
+});
+</script>
+</body>
+</html>

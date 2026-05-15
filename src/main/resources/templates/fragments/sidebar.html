@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<th:block th:fragment="nav(activePage)">
+
+<!-- モバイル ナビバー -->
+<div class="mobile-navbar d-lg-none">
+    <button class="btn btn-sm btn-light border-0" type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-label="メニュー">☰</button>
+    <span class="brand">🚀 Kinetic Social</span>
+</div>
+<div class="offcanvas offcanvas-start" tabindex="-1" id="mobileMenu" style="width:240px;">
+    <div class="offcanvas-header">
+        <span class="fw-bold" style="color:#3d6bcc;">🚀 Kinetic Social</span>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column p-3">
+        <a href="/home" class="nav-link-item" th:classappend="${activePage == 'home'} ? ' active'"><span class="icon">🏠</span> ホーム</a>
+        <a href="/posts" class="nav-link-item" th:classappend="${activePage == 'posts'} ? ' active'"><span class="icon">📋</span> 掲示板</a>
+        <a th:if="${currentUser != null}" th:href="@{/users/{id}(id=${currentUser.id})}"
+           class="nav-link-item" th:classappend="${activePage == 'mypage'} ? ' active'"><span class="icon">👤</span> マイページ</a>
+        <a sec:authorize="hasRole('ADMIN')" href="/admin/users"
+           class="nav-link-item" th:classappend="${activePage == 'admin'} ? ' active'"><span class="icon">👥</span> 社員管理</a>
+        <form th:action="@{/logout}" method="post" class="mt-auto">
+            <button type="submit" class="logout-btn w-100 border-0 bg-transparent text-start">🚪 ログアウト</button>
+        </form>
+    </div>
+</div>
+
+<!-- デスクトップ サイドバー -->
+<div class="sidebar d-none d-lg-flex flex-column">
+    <div class="brand">🚀 Kinetic Social</div>
+    <a href="/home" class="nav-link-item" th:classappend="${activePage == 'home'} ? ' active'"><span class="icon">🏠</span> ホーム</a>
+    <a href="/posts" class="nav-link-item" th:classappend="${activePage == 'posts'} ? ' active'"><span class="icon">📋</span> 掲示板</a>
+    <a th:if="${currentUser != null}" th:href="@{/users/{id}(id=${currentUser.id})}"
+       class="nav-link-item" th:classappend="${activePage == 'mypage'} ? ' active'"><span class="icon">👤</span> マイページ</a>
+    <a sec:authorize="hasRole('ADMIN')" href="/admin/users"
+       class="nav-link-item" th:classappend="${activePage == 'admin'} ? ' active'"><span class="icon">👥</span> 社員管理</a>
+    <form th:action="@{/logout}" method="post" class="mt-auto">
+        <button type="submit" class="logout-btn w-100 border-0 bg-transparent text-start">🚪 ログアウト</button>
+    </form>
+</div>
+
+</th:block>
+</body>
+</html>

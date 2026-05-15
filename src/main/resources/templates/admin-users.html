@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ユーザー管理 - Kinetic Social</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <style>
+        body { background-color: #f4f6f9; margin: 0; }
+        .main-content { padding: 32px 24px; }
+        .role-badge-admin { background: #fde8e8; color: #c0392b; border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; }
+        .role-badge-user  { background: #e8f0fe; color: #3d6bcc; border-radius: 20px; padding: 2px 12px; font-size: 0.78rem; }
+        .retired-row td { color: #aaa; }
+        .retired-badge { background: #f0f0f0; color: #999; border-radius: 20px; padding: 2px 10px; font-size: 0.75rem; }
+        @media (max-width: 991.98px) {
+            .main-content { padding: 16px 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<th:block th:replace="~{fragments/sidebar :: nav('admin')}"></th:block>
+
+<div class="main-content">
+<div class="container-fluid" style="max-width: 960px;">
+
+    <!-- フラッシュメッセージ -->
+    <div th:if="${createSuccess}" class="alert alert-success py-2 small mb-3" th:text="${createSuccess}"></div>
+    <div th:if="${retireError}" class="alert alert-danger py-2 small mb-3" th:text="${retireError}"></div>
+
+    <!-- ヘッダー -->
+    <div class="d-flex justify-content-between align-items-start align-items-md-center flex-column flex-md-row gap-3 mb-4">
+        <div>
+            <h4 class="mb-0">ユーザー管理</h4>
+            <p class="text-muted small mb-0">社員アカウントの作成・管理</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/admin/users/new" class="btn btn-primary btn-sm">＋ 新規アカウント作成</a>
+        </div>
+    </div>
+
+    <!-- 社員検索 -->
+    <div class="mb-3">
+        <input type="text" id="userSearch" class="form-control form-control-sm"
+               placeholder="名前・メール・部署で検索..." oninput="filterUsers(this.value)">
+    </div>
+
+    <!-- 在籍中社員一覧 -->
+    <div class="card border-0 shadow-sm mb-5">
+        <div class="card-header bg-white border-0 pt-3 pb-0">
+            <h6 class="fw-bold mb-0">在籍中の社員</h6>
+        </div>
+        <div style="overflow-x: auto;">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>名前</th>
+                    <th class="d-none d-md-table-cell">メールアドレス</th>
+                    <th class="d-none d-sm-table-cell">部署</th>
+                    <th class="d-none d-sm-table-cell">役職</th>
+                    <th>権限</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="user : ${users}" th:if="${user.email != null}"
+                    th:data-searchable="${#strings.toLowerCase(user.name ?: '') + ' ' + #strings.toLowerCase(user.email ?: '') + ' ' + #strings.toLowerCase(user.department ?: '')}">
+                    <td>
+                        <a th:href="@{/users/{id}(id=${user.id})}" th:text="${user.name ?: '未設定'}" class="text-decoration-none"></a>
+                    </td>
+                    <td class="d-none d-md-table-cell" th:text="${user.email}"></td>
+                    <td class="d-none d-sm-table-cell" th:text="${user.department ?: '-'}"></td>
+                    <td class="d-none d-sm-table-cell" th:text="${user.jobTitle ?: '-'}"></td>
+                    <td>
+                        <span th:if="${user.role == 'ADMIN'}" class="role-badge-admin">管理者</span>
+                        <span th:if="${user.role == 'USER'}"  class="role-badge-user">社員</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a th:href="@{/admin/users/{id}/edit(id=${user.id})}" class="btn btn-outline-secondary btn-sm">編集</a>
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                    th:data-user-id="${user.id}"
+                                    th:data-user-name="${user.name ?: '未設定'}"
+                                    onclick="openRetireModal(this)">退職処理</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(users)}">
+                    <td colspan="6" class="text-center text-muted py-4">在籍中の社員がいません</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- 退職済み社員一覧 -->
+    <div th:if="${!#lists.isEmpty(retiredUsers)}" class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-3 pb-0">
+            <h6 class="fw-bold mb-0 text-muted">退職済み社員（データ保持中）</h6>
+            <p class="text-muted small mb-2">退職日から1年間、投稿・コメントのデータが保持されます。</p>
+        </div>
+        <div style="overflow-x: auto;">
+        <table class="table mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>名前</th>
+                    <th class="d-none d-md-table-cell">メールアドレス</th>
+                    <th class="d-none d-sm-table-cell">部署</th>
+                    <th class="d-none d-sm-table-cell">役職</th>
+                    <th>退職日</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="user : ${retiredUsers}" class="retired-row">
+                    <td><span th:text="${user.name ?: '未設定'}"></span> <span class="retired-badge">退職済み</span></td>
+                    <td class="d-none d-md-table-cell" th:text="${user.email}"></td>
+                    <td class="d-none d-sm-table-cell" th:text="${user.department ?: '-'}"></td>
+                    <td class="d-none d-sm-table-cell" th:text="${user.jobTitle ?: '-'}"></td>
+                    <td th:text="${user.retiredAt != null ? #temporals.format(user.retiredAt, 'yyyy/MM/dd') : '-'}"></td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<!-- 退職処理 確認モーダル -->
+<div class="modal fade" id="retireModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-bold">退職処理の確認</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="retireForm" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <div class="modal-body">
+                    <p class="small mb-3">
+                        <strong id="retireUserName"></strong> を退職処理します。<br>
+                        投稿・コメントのデータは1年間保持されます。
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">退職日 <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" name="retiredAt" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-danger btn-sm">退職処理を実行</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+setTimeout(() => document.querySelectorAll('.alert').forEach(el => {
+    el.style.transition = 'opacity 0.5s'; el.style.opacity = '0';
+    setTimeout(() => el.remove(), 500);
+}), 4000);
+function filterUsers(q) {
+    const kw = q.toLowerCase();
+    document.querySelectorAll('tbody tr[data-searchable]').forEach(row => {
+        row.style.display = row.dataset.searchable.includes(kw) ? '' : 'none';
+    });
+}
+function openRetireModal(btn) {
+    const userId = btn.dataset.userId;
+    const userName = btn.dataset.userName;
+    document.getElementById('retireUserName').textContent = userName;
+    document.getElementById('retireForm').action = '/admin/users/' + userId + '/delete';
+    new bootstrap.Modal(document.getElementById('retireModal')).show();
+}
+</script>
+</body>
+</html>

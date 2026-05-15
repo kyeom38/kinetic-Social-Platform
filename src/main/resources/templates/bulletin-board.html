@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>掲示板 - Kinetic Social</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <style>
+        body { background-color: #f4f6f9; margin: 0; }
+        .main-content { padding: 0 32px; }
+
+        /* ── 掲示板スタイル ── */
+        .category-btn { border-radius: 20px; font-size: 0.85rem; margin: 2px; }
+        .post-card { border-radius: 12px; border: none; box-shadow: 0 1px 4px rgba(0,0,0,0.08); transition: box-shadow 0.2s; position: relative; min-height: 200px; }
+        .post-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .post-card img.cover { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; }
+        .category-tag { background: #e8f0fe; color: #3d6bcc; border-radius: 20px; padding: 2px 10px; font-size: 0.78rem; }
+        .author-avatar { width: 36px; height: 36px; border-radius: 50%; background: #aaa; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; overflow: hidden; flex-shrink: 0; }
+        .author-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .author-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+        .delete-btn {
+            position: absolute; top: 10px; right: 10px; z-index: 10;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: rgba(220,53,69,0.85); color: white;
+            border: none; font-size: 0.8rem; line-height: 1;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0.35; transition: opacity 0.15s;
+        }
+        .col-md-4:hover .delete-btn { opacity: 1; }
+        @media (hover: none) { .delete-btn { opacity: 0.85; } }
+        .post-card-rss { border-left: 3px solid #adb5bd !important; background: #fafafa; }
+        .expired-badge { background: #f0f0f0; color: #888; border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; }
+        .hobby-sub-card { border-radius: 12px; border: 2px solid #e8eaf0; background: white;
+                          padding: 16px 12px; text-align: center; text-decoration: none; color: inherit;
+                          transition: all 0.15s; display: block; }
+        .hobby-sub-card:hover, .hobby-sub-card.active { border-color: #3d6bcc; background: #eef2fb; color: #3d6bcc; }
+        .hobby-sub-card .icon { font-size: 1.6rem; }
+        .hobby-sub-card .label { font-size: 0.82rem; font-weight: 600; margin-top: 4px; }
+
+        @media (max-width: 991.98px) {
+            .main-content { padding: 0 16px; }
+        }
+        @media (max-width: 575.98px) {
+            .header-actions { flex-wrap: wrap; gap: 4px !important; }
+            .header-actions .btn { font-size: 0.8rem; padding: 4px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<th:block th:replace="~{fragments/sidebar :: nav('posts')}"></th:block>
+
+<!-- メインコンテンツ -->
+<div class="main-content">
+<div class="container py-4 py-md-5">
+
+    <!-- ヘッダー -->
+    <div class="d-flex justify-content-between align-items-start align-items-md-center flex-column flex-md-row gap-3 mb-2">
+        <div>
+            <h4 class="mb-0">掲示板</h4>
+            <p class="text-muted small mb-0">最新のニュース、イベント、コミュニティ情報をチェックしましょう。</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center header-actions">
+            <a href="/posts/new" class="btn btn-primary btn-sm">＋ 新規投稿</a>
+        </div>
+    </div>
+
+    <!-- 削除成功メッセージ -->
+    <div th:if="${deleteSuccess}" class="alert alert-success py-2 small mb-3" th:text="${deleteSuccess}"></div>
+
+    <!-- キーワード検索 -->
+    <form th:action="@{/posts}" method="get" class="d-flex gap-2 mb-3">
+        <input type="hidden" name="category" th:value="${selectedCategory}">
+        <input type="hidden" name="subCategory" th:value="${selectedSubCategory}">
+        <input type="text" name="keyword" class="form-control form-control-sm"
+               placeholder="キーワードで検索..." th:value="${keyword}">
+        <button type="submit" class="btn btn-outline-secondary btn-sm flex-shrink-0">検索</button>
+        <a th:if="${keyword != null and keyword != ''}"
+           th:href="@{/posts(category=${selectedCategory},subCategory=${selectedSubCategory})}"
+           class="btn btn-outline-danger btn-sm flex-shrink-0">✕</a>
+    </form>
+    <!-- 検索結果件数 -->
+    <div th:if="${keyword != null and keyword != ''}" class="text-muted small mb-2">
+        "<span th:text="${keyword}"></span>" の検索結果: <strong th:text="${#lists.size(posts)}"></strong> 件（このページ）
+    </div>
+
+    <!-- カテゴリーフィルター -->
+    <div class="mb-4" style="overflow-x: auto; white-space: nowrap; padding-bottom: 4px;">
+        <a th:href="@{/posts}" th:classappend="${selectedCategory == ''} ? 'btn-primary' : 'btn-outline-secondary'"
+           class="btn btn-sm category-btn">全体</a>
+        <a th:each="cat : ${categories}"
+           th:href="@{/posts(category=${cat})}"
+           th:text="${cat}"
+           th:classappend="${selectedCategory == cat} ? 'btn-primary' : 'btn-outline-secondary'"
+           class="btn btn-sm category-btn"></a>
+    </div>
+
+    <!-- カテゴリ案内文 -->
+    <div th:if="${categoryDescription != null}"
+         style="background:#f0f7ff; border-left:4px solid #3d6bcc; border-radius:0 8px 8px 0;
+                padding:12px 16px; font-size:0.85rem; margin-bottom:1rem;"
+         th:text="${categoryDescription}"></div>
+
+    <!-- 趣味・おしゃべり サブカテゴリカード -->
+    <div class="mb-4" th:if="${selectedCategory == '趣味・おしゃべり'}">
+        <p class="text-muted small fw-bold mb-2">🎨 趣味のジャンルで探す</p>
+        <div class="d-flex flex-nowrap gap-2 pb-1" style="overflow-x:auto;">
+            <div style="flex:0 0 auto; width:110px;" th:each="sub : ${hobbySubs}">
+                <a th:href="@{/posts(category='趣味・おしゃべり', subCategory=${sub})}"
+                   th:classappend="${selectedSubCategory == sub} ? ' active' : ''"
+                   class="hobby-sub-card">
+                    <div class="icon"
+                         th:text="${sub == 'スポーツ'} ? '⚽' :
+                                   (${sub == '音楽'} ? '🎵' :
+                                   (${sub == 'アニメ'} ? '🎌' :
+                                   (${sub == '旅行'} ? '✈️' :
+                                   (${sub == 'ゲーム'} ? '🎮' :
+                                   (${sub == '動物'} ? '🐾' : '💬')))))"></div>
+                    <div class="label" th:text="${sub}"></div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 投稿カード一覧 -->
+    <div class="row g-3">
+        <div th:if="${#lists.isEmpty(posts)}" class="col-12 text-center text-muted py-5">
+            投稿がありません
+        </div>
+        <div class="col-md-4" th:each="post : ${posts}" style="position: relative;">
+
+            <!-- 管理者用削除ボタン -->
+            <form th:if="${#authorization.expression('hasRole(''ADMIN'')')}"
+                  th:action="@{/posts/{id}/delete(id=${post.id})}" method="post"
+                  onsubmit="return confirm('この投稿を削除しますか？')">
+                <button type="submit" class="delete-btn" title="削除">✕</button>
+            </form>
+
+            <!-- 外部記事 (RSS) -->
+            <a th:if="${post.sourceUrl != null and !#strings.isEmpty(post.sourceUrl)}"
+               th:href="${post.sourceUrl}" target="_blank" rel="noopener noreferrer"
+               class="text-decoration-none text-dark">
+                <div class="card post-card post-card-rss p-3 h-100">
+                    <img th:if="${post.coverImageUrl != null and !#strings.isEmpty(post.coverImageUrl)}" th:src="${post.coverImageUrl}" class="cover mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                        <span class="category-tag d-inline-block" th:text="${post.category}"></span>
+                        <span class="small text-muted" style="font-size:0.72rem;">🔗 外部記事</span>
+                        <span th:if="${post.eventDate != null and post.eventDate.isBefore(today)}"
+                              class="expired-badge">終了したイベント</span>
+                    </div>
+                    <h6 class="fw-bold" th:text="${post.title}"></h6>
+                    <p class="text-muted small" th:text="${#strings.abbreviate(post.content, 100)}"></p>
+                    <div class="d-flex align-items-center mt-auto pt-2 border-top">
+                        <span class="small text-muted ms-auto" th:text="${#temporals.format(post.createdAt, 'yyyy/MM/dd')}"></span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 通常投稿 -->
+            <a th:if="${post.sourceUrl == null or #strings.isEmpty(post.sourceUrl)}"
+               th:href="@{/posts/{id}(id=${post.id})}"
+               class="text-decoration-none text-dark">
+                <div class="card post-card p-3 h-100">
+                    <img th:if="${post.coverImageUrl != null and !#strings.isEmpty(post.coverImageUrl)}" th:src="${post.coverImageUrl}" class="cover mb-3">
+                    <!-- 画像なし＆趣味カテゴリ: サブカテゴリ絵文字プレースホルダー -->
+                    <div th:if="${(post.coverImageUrl == null or #strings.isEmpty(post.coverImageUrl)) and post.subCategory != null}"
+                         class="cover mb-3 d-flex align-items-center justify-content-center"
+                         style="background: linear-gradient(135deg,#e8f0fe,#d0dcfb); border-radius:8px; font-size:3rem;">
+                        <span th:text="${post.subCategory == 'スポーツ'} ? '⚽' :
+                                       (${post.subCategory == '音楽'} ? '🎵' :
+                                       (${post.subCategory == 'アニメ'} ? '🎌' :
+                                       (${post.subCategory == '旅行'} ? '✈️' :
+                                       (${post.subCategory == 'ゲーム'} ? '🎮' :
+                                       (${post.subCategory == '動物'} ? '🐾' : '💬')))))"></span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                        <span class="category-tag" th:text="${post.category}"></span>
+                        <span th:if="${post.subCategory != null}"
+                              class="badge bg-light text-secondary" style="font-size:0.7rem;"
+                              th:text="${post.subCategory}"></span>
+                        <span th:if="${post.eventDate != null and post.eventDate.isBefore(today)}"
+                              class="expired-badge">終了したイベント</span>
+                    </div>
+                    <h6 class="fw-bold" th:text="${post.title}"></h6>
+                    <p class="text-muted small" th:text="${#strings.abbreviate(post.content, 80)}"></p>
+                    <div class="d-flex align-items-center mt-auto pt-2 border-top">
+                        <!-- 著者プロフィール写真 -->
+                        <div class="author-avatar me-2">
+                            <img th:if="${post.authorProfileImageUrl != null and #strings.startsWith(post.authorProfileImageUrl, '/')}"
+                                 th:src="${post.authorProfileImageUrl}" alt="">
+                            <span th:if="${post.authorProfileImageUrl != null and !#strings.startsWith(post.authorProfileImageUrl, '/')}"
+                                  th:text="${post.authorProfileImageUrl}"></span>
+                            <span th:if="${post.authorProfileImageUrl == null}"
+                                  th:text="${post.authorName != null and !#strings.isEmpty(post.authorName)} ? ${#strings.substring(post.authorName,0,1)} : '?'"></span>
+                        </div>
+                        <span class="small text-muted author-name" th:text="${post.authorName ?: '匿名'}"></span>
+                        <span class="small text-muted ms-auto" th:text="${#temporals.format(post.createdAt, 'yyyy/MM/dd')}"></span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- ページネーション -->
+    <div th:if="${totalPages > 1}" class="d-flex justify-content-center mt-4 pb-2">
+        <nav>
+            <ul class="pagination pagination-sm">
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link" th:href="@{/posts(category=${selectedCategory},subCategory=${selectedSubCategory},keyword=${keyword},page=${currentPage - 1})}">‹</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                    th:classappend="${i == currentPage} ? 'active'">
+                    <a class="page-link"
+                       th:href="@{/posts(category=${selectedCategory},subCategory=${selectedSubCategory},keyword=${keyword},page=${i})}"
+                       th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                    <a class="page-link" th:href="@{/posts(category=${selectedCategory},subCategory=${selectedSubCategory},keyword=${keyword},page=${currentPage + 1})}">›</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
