@@ -49,11 +49,20 @@ java -jar target\demo-0.0.1-SNAPSHOT.jar
 
 ### 設定ファイル
 
-`src/main/resources/application.properties.example` をコピーして `application.properties` にリネームし、DB接続情報を設定する。
+`src/main/resources/application.properties.example` をコピーして `application.properties` にリネームし、各項目を設定する。
 
 ```bash
 cp src/main/resources/application.properties.example src/main/resources/application.properties
 ```
+
+コピー後、以下の項目を必ず実際の値に書き換える。
+
+| キー | 説明 |
+| ---- | ---- |
+| `spring.datasource.*` | DB接続情報 |
+| `admin.email` | 初期管理者のメールアドレス |
+| `admin.name` | 初期管理者の表示名 |
+| `admin.password` | 初期管理者のパスワード。ローカル開発では直接パスワードを記載してよい（`application.properties` は `.gitignore` 対象のため安全）。本番環境では環境変数 `ADMIN_PASSWORD` をセットすれば `${ADMIN_PASSWORD}` のまま自動解決される |
 
 #### DBの用意
 
