@@ -10,6 +10,7 @@ spring.thymeleaf.check-template-location=false
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=false
 
+server.port=${PORT:8080}
 server.servlet.session.tracking-modes=cookie
 
 # HikariCP: Neon へのコールドスタート防止
