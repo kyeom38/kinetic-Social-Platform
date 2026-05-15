@@ -104,15 +104,15 @@ public class PostController {
     public String create(@ModelAttribute PostDto dto,
                          @AuthenticationPrincipal UserDetails userDetails) {
         boolean admin = isAdmin(userDetails);
-        // フロントエンドで選択肢を制限しているため通常は発生しない。
-        // 万が一非管理者が管理者専用カテゴリで送信した場合は無音で投稿フォームに戻す。
         if (!admin && ADMIN_ONLY_CATEGORIES.contains(dto.getCategory())) {
             return "redirect:/posts/new";
         }
-        User user = userRepository.findFirstByEmail(userDetails.getUsername()).orElse(null);
-        if (user != null) {
-            dto.setAuthorId(user.getId());
+        if (!admin) {
+            dto.setAnnouncement(false);
         }
+        User user = userRepository.findFirstByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalStateException("認証済みユーザーが見つかりません: " + userDetails.getUsername()));
+        dto.setAuthorId(user.getId());
         PostDto created = postService.create(dto);
         return "redirect:/posts/" + created.getId();
     }

@@ -22,6 +22,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findFirstByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("ユーザーが見つかりません: " + email));
 
+        if (!user.isActive()) {
+            throw new UsernameNotFoundException("退職済みアカウント: " + email);
+        }
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),

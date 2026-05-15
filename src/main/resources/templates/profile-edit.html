@@ -240,7 +240,19 @@
     function addTag(val) {
         const span = document.createElement('span');
         span.className = 'tag';
-        span.innerHTML = `<span>${val}</span><span class="remove" onclick="removeTag(this, '${val}')">×</span><input type="hidden" name="hobbies" value="${val}">`;
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = val;
+        const removeSpan = document.createElement('span');
+        removeSpan.className = 'remove';
+        removeSpan.textContent = '×';
+        removeSpan.addEventListener('click', function() { removeTag(this, val); });
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'hobbies';
+        input.value = val;
+        span.appendChild(labelSpan);
+        span.appendChild(removeSpan);
+        span.appendChild(input);
         tagArea.insertBefore(span, tagInput);
     }
 

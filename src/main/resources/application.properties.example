@@ -23,9 +23,9 @@ spring.servlet.multipart.max-file-size=5MB
 spring.servlet.multipart.max-request-size=10MB
 
 # 初期管理者アカウント（ADMINが0人の場合に自動作成）
-admin.email=admin@company.com
-admin.password=ChangeMe1!
-admin.name=管理者
+admin.email=admin@example.com
+admin.password=${ADMIN_PASSWORD}
+admin.name=管理者名
 
 # DB初期化フラグ: trueにして一度起動するとデータが全消去される。完了後はfalseに戻すこと
 app.db.reset=false

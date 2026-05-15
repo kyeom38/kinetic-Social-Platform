@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -15,27 +16,24 @@ import java.util.List;
 public class DatabasePatch {
 
     private final JdbcTemplate jdbcTemplate;
+    private final Environment environment;
 
     @Value("${app.db.reset:false}")
     private boolean dbReset;
 
     private static final List<String> REQUIRED_NOT_NULL = List.of("id", "created_at");
 
-    private static final List<String> VALID_USER_COLUMNS = List.of(
-            "id", "name", "nickname", "employee_id", "birth_date",
-            "profile_image_url", "bio", "communication_style",
-            "company_belief", "email", "password", "role",
-            "department", "job_title", "mbti",
-            "active", "retired_at", "must_change_password", "joined_at"
-    );
-
     @PostConstruct
     public void applyPatches() {
 
         if (dbReset) {
-            log.warn("=== DB RESET: 全テーブルを初期化します ===");
-            runSilently("TRUNCATE TABLE event_votes, comments, posts, user_hobbies, users RESTART IDENTITY CASCADE");
-            log.warn("=== DB RESET 完了 ===");
+            if (environment.matchesProfiles("prod")) {
+                log.warn("=== DB RESET: 本番環境 (prod) では実行されません ===");
+            } else {
+                log.warn("=== DB RESET: 全テーブルを初期化します ===");
+                runSilently("TRUNCATE TABLE event_votes, comments, posts, user_hobbies, users RESTART IDENTITY CASCADE");
+                log.warn("=== DB RESET 完了 ===");
+            }
         }
 
         // ── posts: NOT NULL 制約を落とす ──────────────────────────────
@@ -72,17 +70,6 @@ public class DatabasePatch {
             "UPDATE users SET job_title = CASE WHEN manager = true THEN '部長' ELSE '一般社員' END " +
             "WHERE job_title IS NULL AND manager IS NOT NULL"
         );
-
-        // ── users: 不要カラムをドロップ（VALID_USER_COLUMNS にないもの）──
-        List<String> userCols = jdbcTemplate.queryForList(
-                "SELECT column_name FROM information_schema.columns WHERE table_name = 'users'",
-                String.class
-        );
-        for (String col : userCols) {
-            if (!VALID_USER_COLUMNS.contains(col)) {
-                runSilently("ALTER TABLE users DROP COLUMN IF EXISTS \"" + col + "\"");
-            }
-        }
 
         // ── comments: スレッド返信 + ソフト削除 ──────────────────────
         runSilently("ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_id BIGINT REFERENCES comments(id)");

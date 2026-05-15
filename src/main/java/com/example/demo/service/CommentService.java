@@ -70,7 +70,7 @@ public class CommentService {
         if (c.getUser() != null) {
             dto.setAuthorId(c.getUser().getId());
             String name = "ADMIN".equals(c.getUser().getRole()) ? "管理者" : c.getUser().getName();
-            dto.setAuthorName(name != null ? name : "匿名");
+            dto.setAuthorName(name != null && !name.isEmpty() ? name : "匿名");
             dto.setAuthorInitial(dto.getAuthorName().substring(0, 1));
             dto.setAuthorProfileImageUrl(c.getUser().getProfileImageUrl());
         } else {

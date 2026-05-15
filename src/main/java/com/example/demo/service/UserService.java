@@ -64,11 +64,13 @@ public class UserService {
 
     /** 管理者によるアカウント作成。初回ログイン時にパスワード変更を強制する。 */
     public UserDto createWithMustChangePassword(UserDto dto) {
+        if (dto.getPassword() == null || dto.getPassword().isEmpty()) {
+            throw new IllegalArgumentException("パスワードは必須です");
+        }
         User user = toEntity(dto);
         if (dto.getEmail() != null && !dto.getEmail().isEmpty()) {
             user.setEmail(dto.getEmail());
-            user.setPassword(passwordEncoder.encode(
-                    dto.getPassword() != null ? dto.getPassword() : "ChangeMe1!"));
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
             user.setRole(dto.getRole() != null ? dto.getRole() : "USER");
         }
         user.setActive(true);

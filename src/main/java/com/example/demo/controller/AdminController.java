@@ -4,6 +4,7 @@ import com.example.demo.dto.UserDto;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -45,17 +46,13 @@ public class AdminController {
 
     @PostMapping("/users")
     public String createUser(@ModelAttribute UserDto dto, RedirectAttributes ra) {
-        if (dto.getEmail() != null && userRepository.existsByEmail(dto.getEmail())) {
-            ra.addFlashAttribute("createError", "そのメールアドレスはすでに登録されています: " + dto.getEmail());
+        try {
+            userService.createWithMustChangePassword(dto);
+            ra.addFlashAttribute("createSuccess", "アカウントを作成しました: " + dto.getEmail());
+        } catch (DataIntegrityViolationException e) {
+            ra.addFlashAttribute("createError", "そのメールアドレスまたは社員番号はすでに登録されています");
             return "redirect:/admin/users/new";
         }
-        if (dto.getEmployeeId() != null && !dto.getEmployeeId().isEmpty()
-                && userRepository.existsByEmployeeId(dto.getEmployeeId())) {
-            ra.addFlashAttribute("createError", "その社員番号はすでに登録されています: " + dto.getEmployeeId());
-            return "redirect:/admin/users/new";
-        }
-        userService.createWithMustChangePassword(dto);
-        ra.addFlashAttribute("createSuccess", "アカウントを作成しました: " + dto.getEmail());
         return "redirect:/admin/users";
     }
 

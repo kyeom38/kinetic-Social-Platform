@@ -88,7 +88,9 @@ public class PostService {
     public boolean deleteIfAuthorized(Long id, Long currentUserId, boolean isAdmin) {
         return postRepository.findById(id).map(p -> {
             Long authorId = p.getAuthor() != null ? p.getAuthor().getId() : null;
-            if (!isAdmin && !java.util.Objects.equals(currentUserId, authorId)) {
+            boolean authorized = isAdmin ||
+                    (currentUserId != null && authorId != null && currentUserId.equals(authorId));
+            if (!authorized) {
                 log.warn("Unauthorized delete attempt: postId={}, userId={}", id, currentUserId);
                 return false;
             }
